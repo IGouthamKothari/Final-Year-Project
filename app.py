@@ -11,9 +11,16 @@ from tensorflow.keras.layers import Input, Dense, LSTM, Embedding, Dropout, add 
 from tensorflow.keras.preprocessing.text import tokenizer_from_json  # For loading Tokenizer from JSON
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
+from flask_cors import CORS  # Import CORS
+from io import BytesIO
+from PIL import Image
+import base64
+
 
 # Flask app setup
 app = Flask(__name__)
+CORS(app)
+
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -64,19 +71,26 @@ def index():
 # Flask route to handle image uploads
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file and file.filename.endswith(('.png', '.jpg', '.jpeg')):
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        caption = predict_caption(model_vgg_caption, feature_extract(file_path), tokenizer, max_length)
+    data = request.get_json()  # Get the JSON data sent to the route
+    image_data = data['image']  # Access the image data from the JSON
+    image_data = base64.b64decode(image_data.split(",")[1])  # Decode the Base64 string
+
+    # Convert binary data to an image
+    image = Image.open(BytesIO(image_data))
+
+    # Save the image to a file
+    filename = secure_filename("uploaded_image.jpg")  # You might want to dynamically generate filenames
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    image.save(file_path)  # Save image to disk
+
+    # Example processing function, like generating a caption
+    try:
+        # Assuming you have a function to extract features and predict a caption
+        image_features = feature_extract(file_path)  # Extract features
+        caption = predict_caption(model_vgg_caption, image_features, tokenizer, max_length)  # Predict caption
         return jsonify({'filename': filename, 'caption': caption}), 200
-    else:
-        return jsonify({'error': 'Invalid file type'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
