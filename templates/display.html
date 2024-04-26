@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Caption</title>
+</head>
+<body>
+    <h1>Generated Caption</h1>
+    <p>{{ caption }}</p>
+    <img src="{{ image_url }}" alt="Uploaded Image" style="width: 500px;">
+    <br>
+    <a href="{{ url_for('upload_file') }}">Upload another image</a>
+</body>
+</html>
