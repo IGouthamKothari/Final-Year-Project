@@ -9,14 +9,22 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences  # For padding
 from tensorflow.keras.models import Model, load_model  # For creating Keras models and loading saved models
 from tensorflow.keras.layers import Input, Dense, LSTM, Embedding, Dropout, add  # For building neural network layers
 from tensorflow.keras.preprocessing.text import tokenizer_from_json  # For loading Tokenizer from JSON
+from flask import Flask, request, jsonify, render_template
+from werkzeug.utils import secure_filename
+
+# Flask app setup
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Load Tokenizer from JSON file
-with open('models/tokenizer.json') as f:
-    data = f.read()
+with open('models/tokenizer.json', 'r') as file:
+    data = file.read()
     tokenizer = tokenizer_from_json(data)
 
+# Load the pre-trained models
 model_vgg_caption = load_model("models/vgg16model.h5")
-# Load VGG16 model for feature extraction
 base_model = VGG16(weights='imagenet')
 vgg_model = Model(inputs=base_model.inputs, outputs=base_model.layers[-2].output)
 max_length = 35
@@ -30,14 +38,14 @@ def feature_extract(image_path):
     features = vgg_model.predict(image)
     return features
 
-# Convert index to word
+# Function to convert index to word
 def idx_to_word(integer, tokenizer):
     for word, index in tokenizer.word_index.items():
         if index == integer:
             return word
     return None
 
-# Predict caption for an image
+# Function to predict caption for an image
 def predict_caption(model, image_features, tokenizer, max_length):
     in_text = 'startseq'
     for i in range(max_length):
@@ -50,16 +58,25 @@ def predict_caption(model, image_features, tokenizer, max_length):
             break
         in_text += ' ' + word
     return in_text
+@app.route('/')
+def index():
+    return render_template('upload.html')
+# Flask route to handle image uploads
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and file.filename.endswith(('.png', '.jpg', '.jpeg')):
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        caption = predict_caption(model_vgg_caption, feature_extract(file_path), tokenizer, max_length)
+        return jsonify({'filename': filename, 'caption': caption}), 200
+    else:
+        return jsonify({'error': 'Invalid file type'}), 400
 
-# Function to generate and display the caption along with the image
-def generate_image_caption(img_path):
-    image = load_img(img_path)
-    image_features = feature_extract(img_path)
-    caption = predict_caption(model_vgg_caption, image_features, tokenizer, max_length)
-    print('--------------------Predicted--------------------')
-    print(caption)
-    plt.imshow(image)
-    plt.show()
-
-# Example usage
-generate_image_caption("60aaca3a-15a3-403f-a72d-d9f30e5f74d7.jpeg")
+if __name__ == '__main__':
+    app.run(debug=True)

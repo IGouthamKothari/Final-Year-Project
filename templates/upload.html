@@ -1,13 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Upload an Image</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Captioning Upload</title>
 </head>
 <body>
-    <h1>Upload an Image to Generate Caption</h1>
-    <form method=post enctype=multipart/form-data>
-        <input type=file name=file>
-        <input type=submit value=Upload>
+    <h1>Upload your image</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/png, image/jpeg">
+        <input type="submit" value="Upload Image">
     </form>
+    <div id="captionResult"></div>
+
+    <script>
+        // Handle the form submission to interact with the Flask backend
+        document.querySelector('form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('captionResult').innerText = 'Error: ' + data.error;
+                } else {
+                    document.getElementById('captionResult').innerText = 'Caption: ' + data.caption;
+                }
+            })
+            .catch(error => {
+                document.getElementById('captionResult').innerText = 'Error: Could not connect to server.';
+            });
+        });
+    </script>
 </body>
 </html>
