@@ -39,7 +39,7 @@
                             document.getElementById('captionResult').innerText = 'Error: ' + data.error;
                         } else {
                             // Update this line to handle multiple captions if needed
-                            document.getElementById('captionResult').innerText = 'VGG Caption: ' + data.vgg_caption + '\nDenseNet Caption: ' + data.densenet_caption + '\nInception Caption: ' + data.inception_caption;
+                            document.getElementById('captionResult').innerText = 'VGG Caption: ' + data.vgg_caption + '\nDenseNet Caption: ' + data.densenet_caption + '\nInception Caption: ' + data.inception_caption+'\nResnet Caption: ' + data.resnet_caption ;
                         }
                     })
                     .catch(error => {
