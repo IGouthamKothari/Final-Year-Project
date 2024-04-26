@@ -7,33 +7,52 @@
 </head>
 <body>
     <h1>Upload your image</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept="image/png, image/jpeg">
-        <input type="submit" value="Upload Image">
+    <form>
+        <input type="file" id="imageInput" name="file" accept="image/png, image/jpeg">
+        <button type="button" onclick="uploadImage()">Upload Image</button>
     </form>
     <div id="captionResult"></div>
 
     <script>
-        // Handle the form submission to interact with the Flask backend
-        document.querySelector('form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
-            fetch('/upload', {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    document.getElementById('captionResult').innerText = 'Error: ' + data.error;
-                } else {
-                    document.getElementById('captionResult').innerText = 'Caption: ' + data.caption;
-                }
-            })
-            .catch(error => {
-                document.getElementById('captionResult').innerText = 'Error: Could not connect to server.';
-            });
-        });
+        function uploadImage() {
+            const imageInput = document.getElementById('imageInput');
+            if (imageInput.files.length > 0) {
+                const imageFile = imageInput.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const imageDataUrl = e.target.result;
+                    // Extract Base64 encoded image data from the result
+                    const base64EncodedImage = imageDataUrl.split(',')[1];
+
+                    // Prepare JSON object with image data
+                    fetch('/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({image: imageDataUrl})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            document.getElementById('captionResult').innerText = 'Error: ' + data.error;
+                        } else {
+                            // Update this line to handle multiple captions if needed
+                            document.getElementById('captionResult').innerText = 'VGG Caption: ' + data.vgg_caption + '\nDenseNet Caption: ' + data.densenet_caption;
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('captionResult').innerText = 'Error: Could not connect to server.';
+                    });
+                };
+
+                // Read the file as Data URL (Base64)
+                reader.readAsDataURL(imageFile);
+            } else {
+                document.getElementById('captionResult').innerText = 'Please select an image file.';
+            }
+        }
     </script>
 </body>
 </html>
