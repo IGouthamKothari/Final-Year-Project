@@ -149,8 +149,8 @@ def upload_file():
     thread_densenet.join()
     thread_inception.join()
     thread_resnet.join()
-
     return jsonify(captions), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)
